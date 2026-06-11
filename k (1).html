@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K線盲測與模擬交易修練場 — 50關傳奇終端</title>
+    <!-- 使用 Tailwind CSS 進行現代化 UI 排版 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 FontAwesome 圖標 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#080a0c',
+                        darkCard: '#11151a',
+                        darkBorder: '#222933',
+                        bullish: '#f6465d', // 紅漲 (預設亞股)
+                        bearish: '#0ecb81',  // 綠跌 (預設亞股)
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 隱藏滾動條但保持功能 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #11151a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #222933;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3a4556;
+        }
+    </style>
+</head>
+<body class="bg-darkBg text-gray-200 min-h-screen font-sans antialiased selection:bg-yellow-500/30">
+
+    <nav class="bg-darkCard border-b border-darkBorder px-6 py-4 flex flex-wrap justify-between items-center gap-4">
+        <div class="flex items-center space-x-3">
+            <div class="bg-gradient-to-tr from-yellow-500 to-amber-600 p-2.5 rounded-xl shadow-lg">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-200">
+                    K線盲測與模擬交易修練場
+                </h1>
+                <p class="text-xs text-gray-400 font-medium">50大傳奇盤勢技術分析挑戰系統</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-4">
+            <!-- 虛擬資金顯示 -->
+            <div class="bg-darkBg border border-darkBorder rounded-lg px-4 py-1.5 flex items-center space-x-3">
+                <svg class="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                </svg>
+                <div>
+                    <span class="text-[9px] text-gray-400 block uppercase font-bold tracking-wider">虛擬帳戶資金</span>
+                    <span id="accountBalance" class="text-sm font-mono font-bold text-yellow-400">$100,000.00</span>
+                </div>
+            </div>
+            
+            <!-- 配色方案切換 -->
+            <button id="colorSchemeBtn" onclick="toggleColorScheme()" class="bg-darkBg hover:bg-darkBorder border border-darkBorder text-xs text-gray-300 px-3 py-2 rounded-lg flex items-center space-x-2 transition-all">
+                <span class="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-red-500 to-green-500"></span>
+                <span id="colorSchemeText">切換美股配色 (綠漲紅跌)</span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 lg:px-6 pt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-darkCard border border-darkBorder rounded-xl p-3 flex justify-between items-center">
+            <div>
+                <span class="text-[9px] text-gray-400 block font-bold uppercase">操盤頭銜 Rank</span>
+                <span id="userRankText" class="text-sm font-bold text-yellow-400">市場新手</span>
+            </div>
+            <div class="bg-yellow-500/10 p-2.5 rounded-lg text-yellow-500 flex items-center justify-center w-9 h-9">
+                <i class="fa-solid fa-crown text-sm"></i>
+            </div>
+        </div>
+        <div class="bg-darkCard border border-darkBorder rounded-xl p-3 flex justify-between items-center">
+            <div>
+                <span class="text-[9px] text-gray-400 block font-bold uppercase">盲測勝率 Win Rate</span>
+                <span id="winRateText" class="text-sm font-mono font-bold text-emerald-400">0.0%</span>
+            </div>
+            <div class="bg-emerald-500/10 p-2.5 rounded-lg text-emerald-500 flex items-center justify-center w-9 h-9">
+                <i class="fa-solid fa-percent text-sm"></i>
+            </div>
+        </div>
+        <div class="bg-darkCard border border-darkBorder rounded-xl p-3 flex justify-between items-center">
+            <div>
+                <span class="text-[9px] text-gray-400 block font-bold uppercase">總挑戰關卡 Completed</span>
+                <span id="completedCountText" class="text-sm font-mono font-bold text-blue-400">0 / 50</span>
+            </div>
+            <div class="bg-blue-500/10 p-2.5 rounded-lg text-blue-400 flex items-center justify-center w-9 h-9">
+                <i class="fa-solid fa-circle-check text-sm"></i>
+            </div>
+        </div>
+        <div class="bg-darkCard border border-darkBorder rounded-xl p-3 flex justify-between items-center">
+            <div>
+                <span class="text-[9px] text-gray-400 block font-bold uppercase">累計總盈虧 Total PnL</span>
+                <span id="totalProfitText" class="text-sm font-mono font-bold text-gray-400">+$0.00</span>
+            </div>
+            <div class="bg-gray-500/10 p-2.5 rounded-lg text-gray-400 flex items-center justify-center w-9 h-9">
+                <i class="fa-solid fa-sack-dollar text-sm"></i>
+            </div>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <div class="lg:col-span-4 flex flex-col space-y-6">
+            
+            <!-- 50 關選擇控制台 -->
+            <div class="bg-darkCard border border-darkBorder rounded-xl p-5 shadow-lg">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-sm font-bold text-gray-100 flex items-center">
+                        <svg class="w-4 h-4 text-yellow-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                        </svg>
+                        解鎖 50 大歷史傳奇關卡
+                    </h3>
+                    <span id="currentLevelBadge" class="text-[10px] bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded font-semibold border border-yellow-500/30">關卡 1</span>
+                </div>
+
+                <!-- 關卡分頁標籤頁 -->
+                <div class="flex border-b border-darkBorder mb-3 text-[11px] font-bold">
+                    <button onclick="changePage(0)" id="tab-p-0" class="flex-1 py-1 text-yellow-500 border-b-2 border-yellow-500">1-10</button>
+                    <button onclick="changePage(1)" id="tab-p-1" class="flex-1 py-1 text-gray-400 hover:text-white">11-20</button>
+                    <button onclick="changePage(2)" id="tab-p-2" class="flex-1 py-1 text-gray-400 hover:text-white">21-30</button>
+                    <button onclick="changePage(3)" id="tab-p-3" class="flex-1 py-1 text-gray-400 hover:text-white">31-40</button>
+                    <button onclick="changePage(4)" id="tab-p-4" class="flex-1 py-1 text-gray-400 hover:text-white">41-50</button>
+                </div>
+
+                <!-- 關卡按鈕網格 (動態產生 10 個按鈕) -->
+                <div id="levelGrid" class="grid grid-cols-2 gap-2 h-[220px] overflow-y-auto pr-1">
+                    <!-- 動態渲染 -->
+                </div>
+                
+                <div class="mt-4 p-3 bg-darkBg rounded-lg border border-darkBorder text-[11px] leading-relaxed text-gray-400">
+                    <span class="text-gray-200 font-bold block mb-1">📋 盤勢背景：</span>
+                    <p id="levelBackground" class="h-[75px] overflow-y-auto">載入中...</p>
+                </div>
+            </div>
+
+            <div class="bg-darkCard border border-darkBorder rounded-xl p-5 shadow-lg flex-1 flex flex-col min-h-[300px]">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-sm font-bold text-gray-100 flex items-center">
+                        <svg class="w-4 h-4 text-yellow-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                        </svg>
+                        日K細部數據
+                    </h3>
+                    <span class="text-xs text-gray-400 font-mono" id="tableDayRange">Day 1 ~ Day 15</span>
+                </div>
+                
+                <!-- 數據表格區域 -->
+                <div class="overflow-y-auto flex-1 border border-darkBorder rounded-lg max-h-[300px]">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="bg-darkBg sticky top-0 border-b border-darkBorder text-gray-400 z-10">
+                            <tr>
+                                <th class="p-2 text-center">天數</th>
+                                <th class="p-2 text-right">收盤價</th>
+                                <th class="p-2 text-center text-yellow-500">5MA</th>
+                                <th class="p-2 text-center text-blue-400">20MA</th>
+                                <th class="p-2 text-right">成交量</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTableBody" class="divide-y divide-darkBorder/40">
+                            <!-- 動態生成 -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 圖例提示 -->
+                <div class="mt-3 grid grid-cols-3 gap-1 text-center text-[10px] text-gray-500 border-t border-darkBorder/50 pt-3">
+                    <div class="flex items-center justify-center space-x-1">
+                        <span class="w-2 h-0.5 bg-yellow-500 inline-block"></span>
+                        <span>5日均線</span>
+                    </div>
+                    <div class="flex items-center justify-center space-x-1">
+                        <span class="w-2 h-0.5 bg-blue-500 inline-block"></span>
+                        <span>20日均線</span>
+                    </div>
+                    <div class="flex items-center justify-center space-x-1">
+                        <span class="w-2 h-2 bg-gray-600 rounded-sm inline-block"></span>
+                        <span>成交量</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="lg:col-span-8 flex flex-col space-y-6">
+            
+            <!-- 原生 Canvas K線與均線成交量圖表 -->
+            <div class="bg-darkCard border border-darkBorder rounded-xl p-5 shadow-lg flex flex-col">
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-lg font-extrabold tracking-wide text-white" id="stockPlaceholderName">神秘股 X</span>
+                        <span class="text-xs bg-gray-800 text-gray-400 px-2.5 py-0.5 rounded-full border border-darkBorder" id="phaseIndicator">第一階段：觀察期 (Day 1 - 15)</span>
+                    </div>
+                    <div class="text-xs">
+                        <span class="text-gray-400">最新收盤價: <strong id="latestPriceText" class="text-white font-mono text-sm">--</strong></span>
+                    </div>
+                </div>
+                
+                <!-- 畫布容器：自動調適寬高，支援十字游標懸浮看盤提示 -->
+                <div class="w-full bg-darkBg rounded-xl p-3 border border-darkBorder/50 relative overflow-hidden" id="canvasContainer">
+                    <canvas id="stockCanvas" class="w-full block" style="height: 380px;"></canvas>
+                    
+                    <!-- 浮動看盤提示 (Tooltip) -->
+                    <div id="chartTooltip" class="absolute pointer-events-none bg-darkCard/95 border border-darkBorder p-2.5 rounded-lg text-[10px] font-mono text-gray-300 hidden z-20 shadow-xl min-w-[130px]">
+                        <div id="tooltipDay" class="font-extrabold text-yellow-500 border-b border-darkBorder pb-1 mb-1">D1</div>
+                        <div>開: <span id="tooltipO">--</span></div>
+                        <div>高: <span id="tooltipH" class="text-red-400">--</span></div>
+                        <div>低: <span id="tooltipL" class="text-green-400">--</span></div>
+                        <div>收: <span id="tooltipC" class="text-white font-bold">--</span></div>
+                        <div>5MA: <span id="tooltipMA5" class="text-yellow-500">--</span></div>
+                        <div>20MA: <span id="tooltipMA20" class="text-blue-400">--</span></div>
+                        <div>量: <span id="tooltipVol">--</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-darkCard border border-darkBorder rounded-xl p-6 shadow-lg">
+                
+                <!-- 狀態 1：等待決策 -->
+                <div id="decisionPanel" class="space-y-5">
+                    <h3 class="text-sm font-bold text-gray-100 flex items-center">
+                        <svg class="w-4 h-4 text-yellow-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                        做出你的交易決策 (第 15 天收盤)
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- 做多按鈕 -->
+                        <button onclick="selectDirection('BUY')" id="btn-dir-buy" class="direction-btn border-2 border-darkBorder bg-darkBg hover:border-emerald-500/50 p-4 rounded-xl text-left transition-all relative overflow-hidden group">
+                            <span class="text-[10px] text-emerald-400 font-bold tracking-wider uppercase block mb-1">看多做多 / BUY</span>
+                            <span class="text-base font-extrabold text-white block">買入持有</span>
+                            <span class="text-xs text-gray-400 block mt-1.5">預期股價回測有撐或爆量突破，向上大漲</span>
+                        </button>
+                        
+                        <!-- 做空按鈕 -->
+                        <button onclick="selectDirection('SHORT')" id="btn-dir-short" class="direction-btn border-2 border-darkBorder bg-darkBg hover:border-rose-500/50 p-4 rounded-xl text-left transition-all relative overflow-hidden group">
+                            <span class="text-[10px] text-rose-400 font-bold tracking-wider uppercase block mb-1">看空做空 / SHORT</span>
+                            <span class="text-base font-extrabold text-white block">融券放空</span>
+                            <span class="text-xs text-gray-400 block mt-1.5">預期股價高檔出貨或跌破支撐，向下崩跌</span>
+                        </button>
+                        
+                        <!-- 觀望按鈕 -->
+                        <button onclick="selectDirection('PASS')" id="btn-dir-pass" class="direction-btn border-2 border-darkBorder bg-darkBg hover:border-gray-500/50 p-4 rounded-xl text-left transition-all relative overflow-hidden group">
+                            <span class="text-[10px] text-gray-400 font-bold tracking-wider uppercase block mb-1">空手 / PASS</span>
+                            <span class="text-base font-extrabold text-white block">不交易觀望</span>
+                            <span class="text-xs text-gray-400 block mt-1.5">盤勢方向混沌未明，在旁觀戰保全資金安全</span>
+                        </button>
+                    </div>
+
+                    <!-- 資金比例與槓桿調整區 (非 PASS 時顯示) -->
+                    <div id="positionSettings" class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-darkBg/50 p-4 rounded-xl border border-darkBorder transition-all">
+                        <!-- 投入成數 -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-xs font-semibold">
+                                <span class="text-gray-400">投入資金比例</span>
+                                <span class="text-yellow-400 font-mono" id="val-position">100%</span>
+                            </div>
+                            <input type="range" id="input-position" min="25" max="100" step="25" value="100" oninput="updateTradePreview()" class="w-full h-1 bg-darkBorder rounded-lg appearance-none cursor-pointer accent-yellow-500">
+                            <div class="flex justify-between text-[9px] text-gray-500 font-mono">
+                                <span>25% (保守)</span>
+                                <span>50%</span>
+                                <span>75%</span>
+                                <span>100% (滿倉)</span>
+                            </div>
+                        </div>
+
+                        <!-- 槓桿比例 -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-xs font-semibold">
+                                <span class="text-gray-400">槓桿倍數 (Leverage)</span>
+                                <span class="text-yellow-400 font-mono" id="val-leverage">1x</span>
+                            </div>
+                            <input type="range" id="input-leverage" min="1" max="5" step="1" value="1" oninput="updateTradePreview()" class="w-full h-1 bg-darkBorder rounded-lg appearance-none cursor-pointer accent-yellow-500">
+                            <div class="flex justify-between text-[9px] text-gray-500 font-mono">
+                                <span>1x (無槓桿)</span>
+                                <span>2x</span>
+                                <span>3x</span>
+                                <span>4x</span>
+                                <span>5x (高槓桿)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 進場確認 -->
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                        <div class="md:col-span-8 space-y-1.5">
+                            <label class="block text-xs font-semibold text-gray-400">技術分析邏輯與進出場依據 (選填)：</label>
+                            <input type="text" id="userAnalysisNotes" placeholder="例如：突破收盤高、帶量爆發、或是回測 20MA 量縮..." class="w-full bg-darkBg text-gray-200 border border-darkBorder focus:border-yellow-500 rounded-lg px-4 py-2 text-xs focus:outline-none transition-all">
+                        </div>
+                        <div class="md:col-span-4">
+                            <button onclick="executeOrder()" class="w-full bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 text-darkBg font-black text-xs py-3 rounded-lg shadow-lg flex items-center justify-center space-x-2 transition-all">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span>進場並開啟盲測</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 狀態 2：已進場，推進進度 -->
+                <div id="revealControlPanel" class="hidden space-y-5">
+                    <div class="flex flex-wrap justify-between items-center border-b border-darkBorder/60 pb-4 gap-4">
+                        <div>
+                            <span class="text-xs text-gray-400 block font-semibold">您的交易狀態：</span>
+                            <div class="flex items-center space-x-2 mt-1">
+                                <span id="lblYourDirection" class="text-xs px-2.5 py-0.5 rounded-full font-bold">做多 (BUY)</span>
+                                <span id="lblYourDetails" class="text-xs font-mono text-gray-300">進場價: -- | 槓桿: 1x</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 實時未實現損益看板 -->
+                        <div class="bg-darkBg border border-darkBorder px-5 py-2 rounded-xl flex items-center space-x-4">
+                            <div>
+                                <span class="text-[9px] text-gray-400 block uppercase font-bold tracking-wider">即時未實現盈虧 (P&L)</span>
+                                <span id="pnlValueText" class="text-lg font-mono font-extrabold text-emerald-400">+0.00%</span>
+                            </div>
+                            <div id="pnlDollarText" class="text-sm font-mono text-emerald-500 font-semibold">+$0.00</div>
+                        </div>
+                    </div>
+
+                    <!-- 推進步進控制 -->
+                    <div class="flex flex-col sm:flex-row gap-4 items-center">
+                        <button onclick="stepReveal(1)" class="w-full sm:flex-1 bg-darkBg hover:bg-darkBorder text-gray-200 border border-darkBorder hover:border-gray-500 font-bold text-xs py-3 rounded-lg flex items-center justify-center space-x-2 transition-all">
+                            <svg class="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+                            </svg>
+                            <span>前進 1 天</span>
+                        </button>
+                        
+                        <button onclick="stepReveal(5)" class="w-full sm:flex-1 bg-darkBg hover:bg-darkBorder text-gray-200 border border-darkBorder hover:border-gray-500 font-bold text-xs py-3 rounded-lg flex items-center justify-center space-x-2 transition-all">
+                            <svg class="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.933 12.8a1 1 0 000-1.6L6.6 7.2A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z"></path>
+                            </svg>
+                            <span>前進 5 天</span>
+                        </button>
+                        
+                        <button onclick="revealAll()" class="w-full sm:flex-1 bg-gradient-to-r from-red-600/95 to-amber-600/95 hover:from-red-700 hover:to-amber-700 text-white font-extrabold text-xs py-3 rounded-lg flex items-center justify-center space-x-2 shadow-lg transition-all">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                            <span>直接揭曉全部未來</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 狀態 3：完成關卡結算 -->
+                <div id="finishedPanel" class="hidden space-y-5">
+                    <div class="bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border border-yellow-500/30 rounded-xl p-5">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="bg-yellow-500 text-darkBg p-1.5 rounded-full text-xs">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                                </svg>
+                            </div>
+                            <h4 class="text-sm font-extrabold text-yellow-400">關卡修練結束！操盤報告已產出</h4>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                            <div class="bg-darkBg/60 p-3 rounded-lg border border-darkBorder/50">
+                                <span class="text-[9px] text-gray-400 block">此筆交易獲利率</span>
+                                <span id="finalPnlPercent" class="text-sm font-mono font-bold text-emerald-400">+0.0%</span>
+                            </div>
+                            <div class="bg-darkBg/60 p-3 rounded-lg border border-darkBorder/50">
+                                <span class="text-[9px] text-gray-400 block">此筆交易淨損益</span>
+                                <span id="finalPnlDollar" class="text-sm font-mono font-bold text-emerald-400">+$0.00</span>
+                            </div>
+                            <div class="bg-darkBg/60 p-3 rounded-lg border border-darkBorder/50">
+                                <span class="text-[9px] text-gray-400 block">盲測標的真實身分</span>
+                                <span id="finalIdentityText" class="text-xs font-bold text-white truncate block mt-0.5">--</span>
+                            </div>
+                            <div class="bg-darkBg/60 p-3 rounded-lg border border-darkBorder/50">
+                                <span class="text-[9px] text-gray-400 block">歷史行情區間</span>
+                                <span id="finalDateText" class="text-[9px] font-mono text-gray-400 block mt-0.5">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 複盤解析 -->
+                    <div class="bg-darkBg border border-darkBorder rounded-xl p-4 text-xs leading-relaxed">
+                        <span class="text-yellow-500 font-bold block text-sm mb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                            </svg>
+                            K線技術解析講堂：
+                        </span>
+                        <p id="analysisReviewText" class="text-gray-300">
+                            正在生成技術點評解析...
+                        </p>
+                    </div>
+
+                    <div class="flex justify-end space-x-3">
+                        <button onclick="resetGame()" class="bg-darkBg hover:bg-darkBorder border border-darkBorder text-gray-300 font-semibold text-xs px-4 py-2 rounded-lg flex items-center space-x-2 transition-all">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.213 15M11 11.25h.01M12 11.25h.01M13 11.25h.01"></path>
+                            </svg>
+                            <span>再試一次</span>
+                        </button>
+                        <button onclick="goToNextLevel()" class="bg-yellow-500 hover:bg-yellow-600 text-darkBg font-bold text-xs px-5 py-2.5 rounded-lg flex items-center space-x-2 shadow-md transition-all">
+                            <span>挑戰下一關</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- 自製 Toast 提示區域 -->
+    <div id="toastNotification" class="fixed bottom-6 right-6 bg-darkCard border border-darkBorder px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 transform translate-y-24 opacity-0 transition-all duration-300 z-50">
+        <div id="toastIcon" class="bg-blue-500/20 text-blue-400 p-1.5 rounded-full text-xs">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+        </div>
+        <p id="toastMessage" class="text-xs text-gray-200">提示消息</p>
+    </div>
+
+    <script>
+        // 定義50個關卡的元數據：
+        // 為了極致優化網頁大小，K線數據採用【確定性演算法 (Deterministic Pseudo-Random Generation)】來實時生成
+        const levelMetas = [
+            // 1-10 關
+            { realName: "蘋果公司 (AAPL)", dateRange: "2021年10月中旬 ~ 11月中旬", pattern: "bull_trend_pullback", basePrice: 150.0, background: "日K線。強勢多頭市場，均線月線向上。股價創下波段新高後拉回，連續量縮修正 5 天逼近上升 20MA（月線），面臨守穩或破線抉擇。", analysis: "經典【多頭月線回測買點】。當趨勢不變時，拉回月線量縮止跌（Day 16 收長下影），代表賣壓已盡。後續迎來強勁的主升段突破噴發。" },
+            { realName: "台積電 (2330)", dateRange: "2022年10月上旬 ~ 11月上旬", pattern: "double_bottom_wash", basePrice: 405.0, background: "日K線。經歷一段漫長熊市，股價在低檔打底。然而 Day 12 突然一根長黑K實體跌破先前低點，引發恐慌性砍倉，Day 15 收盤竟收下影線拉回區間中線，量能異常放大。", analysis: "經典【W底破底翻（假跌破）】！主力利用假跌破洗淨市場恐慌浮額。當 Day 13-15 重新收回原本支撐區之上，即為黃金買點，後續爆發大反彈。" },
+            { realName: "特斯拉 (TSLA)", dateRange: "2021年11月上旬 ~ 11月下旬", pattern: "blowoff_top", basePrice: 284.0, background: "日K線。股價短短一週暴漲 20%，市場極度亢奮。Day 10 收了帶極長上影線且「成交量創歷史天量」的巨幅黑K。Day 15 出現無量弱勢反彈，股價受阻於下彎的 5MA 之下。", analysis: "教科書級的【高檔爆量長上影反轉（作頭）】！爆出歷史天量且留下極長上影，代表主力高檔瘋狂倒貨。無量反彈受阻 5MA 是最後的逃命點，隨後展開崩盤。" },
+            { realName: "輝達 (NVDA)", dateRange: "2023年1月中旬 ~ 2月中旬", pattern: "breakout_retest", basePrice: 162.0, background: "日K線。漫長打底後，Day 10 伴隨量能顯著放大，跳空突破長達半年的頸線大阻力。隨後 Day 15 當天拉回至前頸線位置，日K收下影十字星，成交量創近期新低。", analysis: "經典【突破頸線後的縮量回試】。這類強勢股突破長期阻力後，拉回測試「阻力轉支撐（Neckline Retest）」且成交量窒息，是高勝率的黃金切入點。" },
+            { realName: "微策略 (MSTR)", dateRange: "2024年2月下旬 ~ 3月下旬", pattern: "bull_flag", basePrice: 520.0, background: "日K線。股價此前暴漲 50% 以上，隨後進入高檔狹幅的下降通道進行「旗形整理」，成交量呈波段遞減。Day 15 當天突然收中長紅，量能第一天復甦，突破旗形壓力線。", analysis: "經典【強勢股旗形整理突破（主升段再啟航）】！強勢股以橫盤或極小幅下拉整理代替下跌，一旦量增突破旗形上軌，就是新一波主升狂飆的號角。" },
+            { realName: "聯發科 (2454)", dateRange: "2022年1月中旬 ~ 2月中旬", pattern: "m_top_breakdown", basePrice: 1100.0, background: "日K線。先前牛市行情，但在 Day 3 與 Day 9 二度挑戰高點阻力未果，形成「雙重頂（M頭）」。Day 15 一根帶量長黑K棒直接「實體跌破」這條關鍵頸線支撐。", analysis: "教科書級的【M頭雙重頂成形（破頸線反轉）】。頸線一旦被實體黑K跌破，代表多空易位，支撐一夕變巨大壓力。此時持有多單必須果斷停損，放空者迎來肥美主跌段。" },
+            { realName: "微軟 (MSFT)", dateRange: "2023年5月 ~ 6月", pattern: "breakout_retest", basePrice: 300.0, background: "日K線。歷經兩年整理，股價打出大型「杯柄型態（Cup & Handle）」，並在 Day 10 放量長紅突破歷史高點。Day 15 股價溫和拉回測試突破區，量能極縮，5MA正交叉20MA向上。", analysis: "此為【杯柄型態突破回測】。突破歷史新高後，縮量回測支撐線，代表市場沒有追空賣壓。一旦月線有撐，極易發動大波段的真空區上漲行情。" },
+            { realName: "亞馬遜 (AMZN)", dateRange: "2000年網路泡沫頂峰", pattern: "head_and_shoulders_top", basePrice: 85.0, background: "日K線。處於歷史級泡沫頂端。Day 3 左肩、Day 9 頭部、Day 13 右肩，型態高度對稱。Day 15 股價一根帶量長黑跌穿三週以來的水平頸線位置。", analysis: "經典【頭肩頂反轉（泡沫終結）】。頭肩頂是最具殺傷力的頂部反轉之一。實體跌破頸線代表泡沫破滅，隨後迎來的是漫無天日的估值崩潰瀑布，萬不可攤平做多。" },
+            { realName: "GameStop (GME)", dateRange: "2021年1月世紀軋空狂潮", pattern: "blowoff_top", basePrice: 20.0, background: "日K線。散戶論壇發動聖戰，股價在短短一週多狂飆數倍。Day 11-12 收盤連兩天收高檔天量長影線，隨後出現巨幅波動，Day 15 股價在平盤，但波動高低差高達50%。", analysis: "經典【世紀軋空天量暴跌】。這類情緒與槓桿推升的極致狂飆，一旦爆出歷史天量，往往是多頭耗盡的終極訊號。高檔巨震是趨勢死亡前兆，追高者將面臨 90% 的毀滅性虧損。" },
+            { realName: "比特幣 (BTC)", dateRange: "2017年底歷史高點 ($19,000)", pattern: "blowoff_top", basePrice: 12000.0, background: "日K線。首次主流化狂飆。Day 10 突破 19000 歷史高位後，爆出史無前例的拋售天量，並收出超長上影陰線。隨後幾天波動劇烈下跌，Day 15 試圖反彈但受阻於月線。", analysis: "經典【 parabolic 拋物線噴發見頂】。極度垂直的拋物線走勢必然以崩盤告終。天量上影線代表大戶出逃，反彈月線無力即是趨勢死亡宣告。" },
+
+            // 11-20 關
+            { realName: "以太幣 (ETH)", dateRange: "2021年11月牛市頂峰", pattern: "m_top_breakdown", basePrice: 4200.0, background: "日K線。在 Day 4 創出 4860 高點，隨後快速拉回。Day 11 再度試圖衝高未果，成交量顯著萎縮。Day 15 收盤一根實體大黑K跌穿 M 頭頸線。", analysis: "經典【高檔量價背離 M頭】。第二次衝高無量，反映買盤不濟。一根大黑K實體破頸線宣告雙頂成形，開啟加密貨幣漫長的熊市週期。" },
+            { realName: "超微半導體 (AMD)", dateRange: "2020年7月上升三角突破", pattern: "breakout_retest", basePrice: 52.0, background: "日K線。股價在 50 至 55 美元區間橫向整理長達三個月，打出完美的「上升三角形」。Day 11 放量大紅K突破上軌，Day 15 回測前高支撐，量能急凍。", analysis: "經典【上升三角形突破回測】。高點持平、低點不斷墊高（上升三角），放量突破後縮量回測上軌，是極具爆發力的中繼多頭型態，通常預示新一波主升段。" },
+            { realName: "網飛 (NFLX)", dateRange: "2022年4月財報暴跌後", pattern: "bear_flag_drop", basePrice: 220.0, background: "日K線。財報暴雷導致跳空暴跌 35%。隨後 Day 5-14 在低檔展開微弱、無量的「上升旗形（Bear Flag）」反彈。Day 15 股價突然跌破此旗形下軌，成交量放大。", analysis: "經典【空頭旗形（Bear Flag）低檔續跌】。大跌後的縮量緩步反彈通常只是多頭無力的掙扎（熊旗）。一旦實體跌破旗形下軌，代表第二波主跌段開啟，千萬別盲目抄底。" },
+            { realName: "谷歌 (GOOGL)", dateRange: "2023年3月均線黃金交叉", pattern: "bull_trend_pullback", basePrice: 95.0, background: "日K線。打底完成後，5MA、20MA 與 60MA 呈現多頭排列。股價一波放量拉升後，隨後連續 4 天進行技術性量縮回試，正逼近月線支撐，KD指標已達低檔超賣區。", analysis: "經典【均線多頭排列之月線回試】。多頭初期的縮量回試是極佳的中繼上車點。在20MA（月線）上方且成交量萎縮，表示洗盤成功，隨後將沿均線展開波段多頭行情。" },
+            { realName: "Meta (META)", dateRange: "2022年11月極度超賣 V轉", pattern: "double_bottom_wash", basePrice: 90.0, background: "日K線。因元宇宙投資虧損，股價遭到市場拋售狂跌 60%。Day 1-5 股價在 90 美元打底。Day 12 因利空消息再度跌穿前低至 88 元，Day 15 卻收復區間，並爆出買盤巨量。", analysis: "經典【超級恐慌盤假跌破（V形翻轉底）】。在股價極度腰斬、利空不斷時，跌破前低卻被巨量收復，是賣壓竭盡與主力進場的鐵證，隨後爆發出報復性大漲。" },
+            { realName: "Coinbase (COIN)", dateRange: "2023年監管利空打底", pattern: "double_bottom_wash", basePrice: 55.0, background: "日K線。因SEC起訴利空，股價一夕暴跌。然而 Day 5 ~ 14 股價不跌反穩，Day 15 突然一根帶量長下影紅K將前一天的黑K實體完全吞噬，月線翻揚向上。", analysis: "經典【多頭吞噬（利空不跌）】。利空消息出來股價卻不破底，且收出帶量長下影吞噬K，表示籌碼已由恐慌散戶流入主力手中，利空出盡，是大行情爆發的前兆。" },
+            { realName: "波克夏 (BRK.B)", dateRange: "2022年熊市防禦防波堤", pattern: "bull_trend_pullback", basePrice: 280.0, background: "日K線。大盤處於熊市，但價值股具有極強防禦力。此股在 20MA（月線）上方反覆震盪上升。Day 15 當天再度回踩斜率向上的 20MA 支撐，量能急凍，KD指標在低檔黃金交叉。", analysis: "經典【趨勢股月線支撐買點】。在空頭市場中能沿著月線上升的股票極其珍貴。縮量回踩月線是典型的強勢防禦股買點，安全係數極高。" },
+            { realName: "摩根大通 (JPM)", dateRange: "2008年金融海嘯恐慌底", pattern: "double_bottom_wash", basePrice: 22.0, background: "日K線。雷曼兄弟破產引發海嘯，股價一週內狂瀉 40%。Day 5 在低檔爆出歷史巨量並收長陽。隨後 Day 12 因恐慌再度逼近前低，Day 15 當天收長下影線守住前低。", analysis: "經典【金融危機恐慌雙重底（築底）】。在極端恐慌中，股價不破前低，且成交量顯著大於前波下跌，表示長期價值買盤（巴菲特或主力）進場承接，是歷史級大底。" },
+            { realName: "標普500指數 (SPY)", dateRange: "2020年3月新冠疫情崩盤底", pattern: "double_bottom_wash", basePrice: 230.0, background: "日K線。因疫情封城引發史無前例的流動性危機，指數兩週狂崩 30%。Day 12 熔斷砸出恐慌低點，Day 15 指數大長陽直接吞噬跌勢，聯準會宣布無限量QE。", analysis: "經典【流動性危機政策底（破底翻）】。當全球央行聯手無限量注資，且股價止跌大長陽吞噬，這不是普通的反彈，而是黃金級的「世紀政策大轉折點」，做空者將被無限期軋空。" },
+            { realName: "納斯達克100 (QQQ)", dateRange: "2000年科技泡沫破滅", pattern: "m_top_breakdown", basePrice: 110.0, background: "日K線。科技泡沫頂峰。股價二度挑戰 120 大阻力無量。Day 12 長黑K實體灌破月線，Day 15 出現無量彈升，但受阻於下彎的 5MA 壓力，市場熱議仍為牛市回檔。", analysis: "經典【科技泡沫 M頭雙頂破位】。大眾在二次高點無量時依然盲目瘋狂，但實體跌破月線與頸線是技術面給予的最後離場警告。無量反彈月線就是最後逃命機會。" },
+
+            // 21-30 關
+            { realName: "英特爾 (INTC)", dateRange: "2024年財報崩潰後", pattern: "bear_flag_drop", basePrice: 30.0, background: "日K線。因財報指引極度悲慘，跳空暴跌 25%。隨後股價在低位呈現狹窄、量縮的橫盤整理（熊旗）。Day 15 股價收實體黑K並跌破該整理區下軌。", analysis: "經典【空頭熊旗續跌】。基本面嚴重受損的股票，暴跌後的低檔橫盤整理絕非築底，而是下一個主跌段的蓄勢。跌破下軌是賣壓再啟的訊號。" },
+            { realName: "博通 (AVGO)", dateRange: "2024年拆股前夕爆發", pattern: "breakout_retest", basePrice: 1350.0, background: "日K線。AI晶片需求狂飆。股價在高檔平台整理長達一個月，Day 11 在拆股消息下，大長紅K突破歷史新高平台。Day 15 當天溫和縮量回測該平台邊緣。", analysis: "此為【高檔新高平台突破回測】。突破歷史天價後，平台邊緣從「壓力轉換為強大支撐」。量縮回測不破，是極佳的趨勢延續追買點。" },
+            { realName: "艾司摩爾 (ASML)", dateRange: "2024年半導體修正頂部", pattern: "m_top_breakdown", basePrice: 950.0, background: "日K線。兩度挑戰 1000 大關未果。Day 13 實體大黑K跌破三週以來的頸線支撐 $930，Day 15 股價反彈但完全無法越過下彎的 5MA，成交量低迷。", analysis: "經典【千元大關M頭成形】。整數大關往往伴隨強烈心理阻力。雙頂未過，且跌破頸線後反彈受阻 5MA，確認由多轉空，後續下跌空間巨大。" },
+            { realName: "超微電腦 (SMCI)", dateRange: "2024年狂暴拋物線見頂", pattern: "blowoff_top", basePrice: 850.0, background: "日K線。液冷技術引發驚天炒作，股價短短兩週狂翻倍。Day 11 狂噴到 1000 元以上爆出歷史天量。Day 15 股價高低震盪達 20%，收盤收長上影巨陰K。", analysis: "經典【狂暴主升段拋物線崩潰】。當股價呈現幾乎垂直的走勢，在爆出天量長上影時就是多頭竭盡。隨後往往是毫無支撐的多殺多垂直落體大崩盤。" },
+            { realName: "禮來製藥 (LLY)", dateRange: "2023年減肥藥主升段", pattern: "bull_trend_pullback", basePrice: 450.0, background: "日K線。減肥藥狂熱拉動。股價沿著 20MA（月線）完美上升。Day 15 股價在連續 4 天拉回修正後，以小紅十字星止跌於月線上方，成交量創近期最少。", analysis: "經典【王牌趨勢股拉回月線買點】。具有強大基本面護城河的股票，每次縮量拉回上升的20日均線，都是多頭趨勢中最安全、期望值最高的黃金切入點。" },
+            { realName: "埃克森美孚 (XOM)", dateRange: "2022年石油大牛市", pattern: "bull_flag", basePrice: 82.0, background: "日K線。油價飆升推動。股價急拉一大段後，在 Day 5 - 14 走出完美的平行向下「旗形整理」通道，量能遞減。Day 15 一根帶量長陽線突破整理通道上軌。", analysis: "經典【牛市中繼旗形突破】。在強勢多頭中，股價以旗形通道進行洗盤，突破上軌表示整理結束。這通常是第二波 markup（拉升段）啟動的確信訊號。" },
+            { realName: "波克夏 (BRK.A)", dateRange: "2024年防禦資金避風港", pattern: "breakout_retest", basePrice: 600000.0, background: "日K線。市場動盪，防禦資金湧入。股價歷經 3 個月橫盤整理後，Day 11 強勢長紅突破平台。Day 15 股價縮量回試原突破平台上軌，日K收下影十字線。", analysis: "此為【超大盤股平台突破回測】。這種極大權值股的突破回測，若量能極度萎縮且守穩平台邊緣，代表長線防禦性法人買盤（基石資金）在下方提供鐵板支撐，極安全。" },
+            { realName: "Palantir (PLTR)", dateRange: "2024年納入S&P 500暴漲前", pattern: "breakout_retest", basePrice: 28.0, background: "日K線。股價在 25 到 28 元橫盤盤整多時。Day 11 宣布納入標普，跳空放量突破 28 元阻力。Day 15 股價溫和拉回測試原 28 元跳空缺口邊緣，量能極縮。", analysis: "經典【缺口與頸線雙重支撐回測】。宣布利多後跳空突破長期頸線，隨後縮量回測該頸線不補缺口，代表買盤極其強勢，是高勝率的經典買點。" },
+            { realName: "迪士尼 (DIS)", dateRange: "2021年串流泡沬頂峰", pattern: "m_top_breakdown", basePrice: 195.0, background: "日K線。串流訂戶暴增炒作。Day 4 創高 200 元後無力。Day 12 二度試圖衝關再度受阻。Day 15 一根長黑K實體砸穿月線與頸線，KD指標呈現高檔死亡交叉。", analysis: "此為【高檔題材炒作退潮雙重頂】。當熱門題材股二次衝高失敗、伴隨量能萎縮，且大黑K實體跌破頸線，宣告炒作期結束，隨後是長達數年的泡沫去泡沫化大空頭。" },
+            { realName: "耐吉 (NKE)", dateRange: "2024年庫存危機崩盤前", pattern: "bear_flag_drop", basePrice: 98.0, background: "日K線。因庫存高企與競爭加劇。Day 1一根長黑K直接跌破三個月支撐。Day 5-14 在低檔收出量縮的窄幅「上升通道（熊旗）」。Day 15 股價突然以一根大黑K跌破此通道。", analysis: "經典【庫存危機之多頭誘多熊旗跌破】。大空頭排列中，任何微弱、量縮的反彈都是誘多。實體大黑K跌破熊旗整理區下軌，確認新一輪慘烈下跌展開，必須停損。" },
+
+            // 31-40 關
+            { realName: "好市多 (COST)", dateRange: "2023年消費防禦牛市", pattern: "bull_trend_pullback", basePrice: 530.0, background: "日K線。防禦性消費板塊牛市。股價沿著穩定的 20MA（月線）呈現 45 度角上升。Day 15 股價在連續 5 天量縮拉回後，剛好回踩到上升中的月線，收出極小十字星。", analysis: "經典【優質消費股45度角月線買點】。這類走勢穩健的防禦性藍籌股，月線通常是主力的防守生命線。縮量回踩月線且收十字星，往往提供風險有限、勝率極高的上車點。" },
+            { realName: "Adobe (ADBE)", dateRange: "2023年AI焦慮恐慌底", pattern: "double_bottom_wash", basePrice: 320.0, background: "日K線。因AI工具威脅，股價遭市場拋售暴跌。Day 12 因對手發布新AI，股價再度恐慌盤砸穿前低。Day 15 收盤竟收大下影線紅K，重回原本支撐區，量能創近期新高。", analysis: "經典【AI焦慮恐慌過度之假跌破（破底翻）】。利空被過度放大，導致散戶恐慌砍倉。主力在破底時瘋狂接盤並快速收復。這根巨量破底翻紅K是不可多得的世紀轉折底。" },
+            { realName: "賽富時 (CRM)", dateRange: "2024年業績不佳暴跌後", pattern: "bear_flag_drop", basePrice: 240.0, background: "日K線。因業績展望不佳，一天內暴跌 20%。隨後 Day 5-14 股價進行極微弱、量縮的橫盤整理（熊旗）。Day 15 實體大黑K直接貫破此整理平台，5MA開始下彎。", analysis: "此為【業績雷暴跌後之熊旗破位】。業績暴雷引發的估值調整，通常需要時間和空間來沉澱。暴跌後的縮量整理多為多頭無力抵抗，一旦破位，極易展開第二波補跌。" },
+            { realName: "高通 (QCOM)", dateRange: "2024年手機復甦高檔頂", pattern: "m_top_breakdown", basePrice: 210.0, background: "日K線。手機復甦狂熱。Day 3 衝高 230 元，隨後因大盤不佳而拉回。Day 12 二度衝刺 228 元成交量竟萎縮一半。Day 15 當天收大實體黑K直接跌破近兩週的頸線。", analysis: "經典【晶片大股量背離雙重頂】。第二次衝刺高位，成交量顯著背離，代表跟風買盤已枯竭。跌破頸線即確認雙頂作頭成形，多頭應果斷離場避開回檔風暴。" },
+            { realName: "思科 (CSCO)", dateRange: "2000年科技泡沫極致頂點", pattern: "blowoff_top", basePrice: 75.0, background: "日K線。當年全球市值最高股票。Day 10 股價高歌猛進創歷史新高，爆出天量成交量。隨後 Day 11-14 高檔連續收長上影線陰K，Day 15 大長黑直接吞噬近一週漲幅。", analysis: "此為【世紀科技泡沫之拋物線竭盡頂】。思科當年是網路泡沫的神話，當天量大黑K吞噬近一週走勢時，神話破滅。這種頂部極其危險，通常預示長達數十年的漫長熊市。" },
+            { realName: "通用電氣 (GE)", dateRange: "2018年衰退底部反轉", pattern: "double_bottom_wash", basePrice: 7.0, background: "日K線。百年大廠因債務危機狂瀉。Day 1-5 股價在 7.0 元打底。Day 11 因評級調降再度砸出 6.5 元新低。Day 15 當天股價竟連續三天中紅拉回，完全站上月線，成交量放大。", analysis: "經典【大型百年企業之恐慌盤破底翻】。調降評級導致最後恐慌盤殺出（Day 11），但股價不跌反強拉收復失地並站上月線，代表聰明資金在抄底，危機入市的絕佳買點。" },
+            { realName: "福特汽車 (F)", dateRange: "2021年EV轉型炒作雙頂", pattern: "m_top_breakdown", basePrice: 20.0, background: "日K線。轉型電動車引發瘋狂炒作。Day 3 創高 25 元。Day 11 二度衝關 24.5 元無量。Day 15 當天大黑K一舉跌破 5MA、20MA 與 60MA 頸線重合區，成交量放大。", analysis: "此為【熱門轉型題材之均線糾結 Neckline 崩盤】。雙頂結構加上頸線位置剛好有多條重要均線交匯，一旦放量一箭穿心跌破，代表多頭防線全線崩潰，後續主跌段極其慘烈。" },
+            { realName: "可口可樂 (KO)", dateRange: "2023年防禦資金雙重底", pattern: "double_bottom_wash", basePrice: 54.0, background: "日K線. 升息引發衰退憂慮，資金流入民生股。Day 5 打出 52 元低點。Day 12 再次測試 52.2 元，收出長下影十字線，成交量顯著萎縮。Day 15 當天一根中紅K站上 5MA。", analysis: "經典【民生龍頭縮量雙重底（二隻腳）】。二度回試前低且成交量極縮（Day 12），隨後收陽站上5MA，代表市場賣壓完全枯竭。這是極具防禦、低風險的防守型長線買點。" },
+            { realName: "麥當勞 (MCD)", dateRange: "2024年高檔整理突破", pattern: "breakout_retest", basePrice: 285.0, background: "日K線。股價在 280-290 元區間內收斂整理了近兩個月。Day 11 一根帶量長紅突破 290 整理區天花板。Day 15 股價拉回测试 291 元，日K收下影小陽K，量能萎縮至新低。", analysis: "此為【穩健藍籌股箱體突破回測】。穩健股的箱體突破通常極具可信度。放量突破整理區天花板後，縮量回測不破，是多頭趨勢成立、安全加碼或進場的典範。" },
+            { realName: "沃爾瑪 (WMT)", dateRange: "2024年拆股主升段", pattern: "bull_trend_pullback", basePrice: 58.0, background: "日K線。業績創高加上拆股炒作。股價沿著 20MA（月線）呈現完美上升趨勢。Day 15 股價在創高後連續修正 5 天，剛好碰到 20MA 邊緣，日K收出止跌長下影小紅星。", analysis: "此為【強勢龍頭股拆股預期之月線防守點】。多頭行情中，沿著20MA上升的強勢股，每次縮量回踩月線並收下影線，都是多方籌碼換手完成、準備發動下一波上攻的訊號。" },
+
+            // 41-50 關
+            { realName: "安謀科技 (ARM)", dateRange: "2024年IPO軋空狂飆", pattern: "breakout_retest", basePrice: 120.0, background: "日K線。IPO鎖定期與AI題材推升，股價在 110-120 元橫盤。Day 11 強勢帶量長紅K突破 120 平台。Day 15 當天回踩 121 元，收長下影十字星，量能窒息。", analysis: "經典【熱門次新股突破平台回測】。次新股往往籌碼集中度高。放量突破大型箱體後，縮量回試上軌且收出長下影，代表下方承接力極強，往往預示著一波狂暴的軋空上漲。" },
+            { realName: "Solana (SOL)", dateRange: "2022年FTX崩潰極致恐慌底", pattern: "double_bottom_wash", basePrice: 12.0, background: "日K線。FTX暴雷引發SOL大崩盤，暴跌 90%。Day 5 股價殺到 8 元歷史低點。Day 12 再次因恐慌砸出 7.8 元新低並爆出歷史天量，Day 15 股價竟連拉三天收復 10 元關口。", analysis: "經典【歷史級恐慌天量假跌破（地獄底）】。最嚴重的暴雷利空（FTX倒閉）引發恐慌性多頭自殘，在 Day 12 爆天量破底卻無法守住跌幅，反收復失地，表示長線買盤進場，地獄底確立。" },
+            { realName: "狗狗幣 (DOGE)", dateRange: "2021年馬斯克SNL高檔頂", pattern: "blowoff_top", basePrice: 0.55, background: "日K線。馬斯克上電視炒作。Day 10 股價急拉暴漲創下 0.73 元高點，爆出驚人天量。隨後 Day 11 崩潰暴跌 30%。Day 15 試圖反彈，但高檔籌碼極度混亂，受阻於下彎 5MA。", analysis: "教科書級的【散戶題材狂熱拋物線頂部（利多出盡）】。散戶題材在利多兌現（上電視節目）當天通常就是頂點。天量大跌後無量反彈受阻 5MA，是最後的停損警告。" },
+            { realName: "美高森美 (MCHP)", dateRange: "2023年半導體去庫存頂", pattern: "head_and_shoulders_top", basePrice: 85.0, background: "日K線。半導體修正。Day 3 左肩 88 元、Day 9 頭部 92 元、Day 13 右肩 87 元。Day 15 一根長黑K直接帶量跌穿了這條長達半個月的水平頸線支撐位置。", analysis: "經典【頭肩頂反轉結構確立】。左肩、頭部、右肩結構極為標準，Day 15 的實體黑K放量跌破頸線，標誌著中期多頭趨勢的徹底終結，下方主跌段空間寬廣。" },
+            { realName: "Shopify (SHOP)", dateRange: "2021年底電商泡沫頂", pattern: "m_top_breakdown", basePrice: 1550.0, background: "日K線。疫情紅利到頭。Day 4 創高 1760 元。Day 11 二度衝高至 1740 元，但成交量比第一次萎縮了 60%。Day 15 一根大黑K直接貫穿 20MA與 M頭頸線，KD高檔死叉。", analysis: "此為【高估值科技股之量能極度背離雙重頂】。第二次衝高無量是多頭動能竭竭的警訊。跌破頸線即確認電商泡沫爆破，多頭必須無條件停損，否則將面對長達 80% 的跌幅。" },
+            { realName: "Zoom (ZM)", dateRange: "2020年底居家辦公 Hype Peak", pattern: "m_top_breakdown", basePrice: 500.0, background: "日K線。疫情居家概念極致。Day 3 創 588 元新高。Day 11 二度衝刺 575 元無量。Day 15 一根實體長黑K放量直接摜破月線及頸線支撐 $510，K線型態極為惡劣。", analysis: "經典【暴風題材股之大 M頭確認】。暴風炒作股的特徵就是：怎麼上去就怎麼下來。雙頂成形且放量破頸線，代表熱錢資金瘋狂出逃，趨勢死亡，切忌進場抄底。" },
+            { realName: "Peloton (PTON)", dateRange: "2021年居家健身泡沫破裂", pattern: "bear_flag_drop", basePrice: 110.0, background: "日K線。疫苗普及。股價一根長黑跌破平台。Day 5-14 縮量微幅反彈，形成高姿態「上升旗形（熊旗）」。Day 15 股價突然以一根放量大黑K直接貫破旗形下軌。", analysis: "經典【夕陽題材股之熊旗續跌瀑布】。當居家红利退去，股價暴跌後的縮量平台或上升通道只是誘多。實體黑K破下軌宣告下一波主跌瀑布啟動，做空者的天堂。" },
+            { realName: "波音 (BA)", dateRange: "2024年飛安危機大破位", pattern: "bear_flag_drop", basePrice: 200.0, background: "日K線。艙門脫落等飛安利空爆發。股價跳空暴跌。Day 5-14 在低檔展開無量橫盤箱體整理。Day 15 股價突然一根實體大黑K直接跌破此整理箱體底限，下檔空間開啟。", analysis: "此為【重大危機之低檔整理再破位】。嚴重基本面危機的股票，低檔無量整理往往只是原先套牢盤不甘心砍倉的支撐，一旦新利空再度跌破箱體，將引發新一輪多殺多。" },
+            { realName: "標普500 (SPX)", dateRange: "1987年黑色星期一前夕", pattern: "m_top_breakdown", basePrice: 320.0, background: "日K線。史上最著名的閃崩前夕。Day 4 衝高、Day 11 二度衝高無力。Day 15 指數一根放量大黑K直接貫穿月線與頸線重合點，大跌 3%，市場人心惶惶。", analysis: "經典【歷史級崩盤前的頸線大破位】。黑色星期一崩盤前，技術面上早已出現雙頂、月線下彎以及頸線大黑K摜破的嚴重警告。技術分析的作用就在於在崩盤前救你一命。" },
+            { realName: "高盛集團 (GS)", dateRange: "2021年牛市高檔雙頂", pattern: "m_top_breakdown", basePrice: 405.0, background: "日K線。投行牛市尾聲。Day 3 創 426 元高點。Day 11 二度挑戰 422 元無量。Day 15 當天收大黑K跌穿月線及頸線重合位 $395，KD指標呈現高檔二次死叉交叉向下。", analysis: "經典【金融權值股之高檔雙重頂成形】。權值股的雙頂加上月線下彎與頸線破位，往往代表大週期牛市的轉折點。主力已暗中派發完畢，空頭趨勢確立。"}
+        ];
+
+        let currentLevelIndex = 0;
+        let currentPage = 0; // 當前分頁 (0: 1-10, 1: 11-20, etc.)
+        let isTaiwanColorScheme = true; // 預設：紅漲綠跌
+        let currentDay = 15; // 當前展示至第幾天
+        let virtualBalance = 100000.00; // 模擬初始本金
+        let completedLevels = {}; // 紀錄各關卡完成狀態與最優成績
+
+        // 交易操作之狀態儲存
+        let tradeState = {
+            direction: null, // 'BUY', 'SHORT', 'PASS'
+            entryPrice: 0,
+            allocatedCapital: 0,
+            leverage: 1,
+            shares: 0,
+            notes: ""
+        };
+
+        window.onload = function() {
+            loadProgress();
+            initGame();
+            
+            // 監聽視窗縮放以重繪 Canvas K線
+            window.addEventListener('resize', () => {
+                renderChartAndTables();
+            });
+
+            // 初始化 Canvas 十字星與看盤提示滑鼠移動事件
+            initCanvasInteractiveEvents();
+        };
+
+        // 載入本地存檔
+        function loadProgress() {
+            const savedBalance = localStorage.getItem('bt_virtual_balance');
+            if (savedBalance) {
+                virtualBalance = parseFloat(savedBalance);
+            }
+            const savedCompleted = localStorage.getItem('bt_completed_levels');
+            if (savedCompleted) {
+                completedLevels = JSON.parse(savedCompleted);
+            }
+        }
+
+        // 儲存進度至本地
+        function saveProgress() {
+            localStorage.setItem('bt_virtual_balance', virtualBalance.toFixed(2));
+            localStorage.setItem('bt_completed_levels', JSON.stringify(completedLevels));
+        }
+
+        function initGame() {
+            renderLevelGrid();
+            loadLevel(currentLevelIndex);
+            updateStatsUI();
+            updateBalanceUI();
+        }
+
+        // 更新帳戶資金 UI 顯示
+        function updateBalanceUI() {
+            const balanceEl = document.getElementById('accountBalance');
+            if (balanceEl) {
+                balanceEl.innerText = `$${virtualBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
+        }
+
+        // 切換紅綠配色方案
+        function toggleColorScheme() {
+            isTaiwanColorScheme = !isTaiwanColorScheme;
+            const btnText = document.getElementById('colorSchemeText');
+            
+            if (isTaiwanColorScheme) {
+                btnText.innerText = "切換美股配色 (綠漲紅跌)";
+                showToast("已切換為：台股 / 亞股配色（紅漲綠跌）", "info");
+            } else {
+                btnText.innerText = "切換台股配色 (紅漲綠跌)";
+                showToast("已切換為：美股 / 國際配色（綠漲紅跌）", "info");
+            }
+            renderChartAndTables();
+        }
+
+        // 均線 (Moving Average) 計算輔助
+        function calculateMA(data, period, index) {
+            if (index < period - 1) return null;
+            let sum = 0;
+            for (let i = 0; i < period; i++) {
+                sum += data[index - i].close;
+            }
+            return parseFloat((sum / period).toFixed(2));
+        }
+
+        function seedRandom(seed) {
+            let x = Math.sin(seed++) * 10000;
+            return x - Math.floor(x);
+        }
+
+        function generateLevelData(index) {
+            const meta = levelMetas[index];
+            const seed = (index + 7) * 31.415;
+            let randSeed = seed;
+            
+            function getRand(min, max) {
+                let r = Math.sin(randSeed++) * 10000;
+                r = r - Math.floor(r);
+                return min + r * (max - min);
+            }
+
+            let price = meta.basePrice;
+            let data = [];
+            
+            // 根據 8 大型態預先定義價格路徑乘數 (Day 1 - 25)
+            let path = new Array(25).fill(1.0);
+            
+            switch(meta.pattern) {
+                case "bull_trend_pullback":
+                    for(let i=0; i<10; i++) path[i] = 1.0 + (i * 0.012) + getRand(-0.01, 0.01);
+                    for(let i=10; i<15; i++) path[i] = path[9] * (1.0 - (i - 9) * 0.018) + getRand(-0.005, 0.005);
+                    for(let i=15; i<25; i++) path[i] = path[14] * (1.0 + (i - 14) * 0.025) + getRand(-0.008, 0.008);
+                    break;
+                case "double_bottom_wash":
+                    for(let i=0; i<5; i++) path[i] = 1.0 - (i * 0.016) + getRand(-0.005, 0.005);
+                    for(let i=5; i<9; i++) path[i] = path[4] * (1.0 + (i - 4) * 0.012) + getRand(-0.004, 0.004);
+                    for(let i=9; i<12; i++) path[i] = path[4] * (0.97 - (i - 9) * 0.015) + getRand(-0.003, 0.003);
+                    for(let i=12; i<15; i++) path[i] = path[11] * (1.0 + (i - 11) * 0.032) + getRand(-0.005, 0.005);
+                    for(let i=15; i<25; i++) path[i] = path[14] * (1.0 + (i - 14) * 0.035) + getRand(-0.01, 0.01);
+                    break;
+                case "blowoff_top":
+                    for(let i=0; i<9; i++) path[i] = 1.0 + (i * 0.03) + getRand(-0.008, 0.008);
+                    path[9] = path[8] * 1.07;
+                    path[10] = path[9] * 1.09; 
+                    path[11] = path[10] * 0.92;
+                    path[12] = path[11] * 0.94;
+                    path[13] = path[12] * 0.91;
+                    path[14] = path[13] * 0.93;
+                    for(let i=15; i<25; i++) path[i] = path[14] * Math.pow(0.91, i - 14) + getRand(-0.01, 0.01);
+                    break;
+                case "breakout_retest":
+                    for(let i=0; i<10; i++) path[i] = 1.0 + getRand(-0.012, 0.012);
+                    path[10] = 1.07; 
+                    path[11] = 1.08;
+                    path[12] = 1.06;
+                    path[13] = 1.05;
+                    path[14] = 1.045; 
+                    for(let i=15; i<25; i++) path[i] = path[14] * (1.0 + (i - 14) * 0.03) + getRand(-0.008, 0.008);
+                    break;
+                case "bull_flag":
+                    for(let i=0; i<5; i++) path[i] = 1.0 + (i * 0.04) + getRand(-0.005, 0.005);
+                    for(let i=5; i<14; i++) path[i] = path[4] * (1.0 - (i - 4) * 0.008) + getRand(-0.003, 0.003);
+                    path[14] = path[13] * 1.05; 
+                    for(let i=15; i<25; i++) path[i] = path[14] * (1.0 + (i - 14) * 0.045) + getRand(-0.01, 0.01);
+                    break;
+                case "m_top_breakdown":
+                    for(let i=0; i<4; i++) path[i] = 1.0 + (i * 0.02) + getRand(-0.005, 0.005);
+                    for(let i=4; i<8; i++) path[i] = path[3] * (1.0 - (i - 3) * 0.018) + getRand(-0.004, 0.004);
+                    for(let i=8; i<12; i++) path[i] = path[7] * (1.0 + (i - 7) * 0.016) + getRand(-0.003, 0.003); 
+                    path[12] = path[11] * 0.94;
+                    path[13] = path[12] * 0.91;
+                    path[14] = path[13] * 0.88; 
+                    for(let i=15; i<25; i++) path[i] = path[14] * Math.pow(0.93, i - 14) + getRand(-0.008, 0.008);
+                    break;
+                case "head_and_shoulders_top":
+                    path[0] = 1.01; path[1] = 1.03; path[2] = 1.05; 
+                    path[3] = 1.02; path[4] = 1.00; path[5] = 0.99; 
+                    path[6] = 1.04; path[7] = 1.08; path[8] = 1.10; 
+                    path[9] = 1.03; path[10] = 1.01; path[11] = 0.99; 
+                    path[12] = 1.03; path[13] = 1.04; 
+                    path[14] = 0.94; 
+                    for(let i=15; i<25; i++) path[i] = path[14] * Math.pow(0.92, i - 14) + getRand(-0.01, 0.01);
+                    break;
+                case "bear_flag_drop":
+                    for(let i=0; i<4; i++) path[i] = 1.0 - (i * 0.05) + getRand(-0.01, 0.01);
+                    for(let i=4; i<14; i++) path[i] = path[3] * (1.0 + (i - 3) * 0.007) + getRand(-0.003, 0.003);
+                    path[14] = path[13] * 0.92; 
+                    for(let i=15; i<25; i++) path[i] = path[14] * Math.pow(0.90, i - 14) + getRand(-0.01, 0.01);
+                    break;
+                default:
+                    for(let i=0; i<25; i++) path[i] = 1.0 + getRand(-0.05, 0.05);
+            }
+
+            // 根據路徑百分比實例化 OHLCV K線數據
+            let generatedData = [];
+            for (let i = 0; i < 25; i++) {
+                let targetClose = meta.basePrice * path[i];
+                let prevClose = i === 0 ? meta.basePrice : generatedData[i-1].close;
+                
+                let open = prevClose * getRand(0.995, 1.005);
+                let high = Math.max(open, targetClose) * getRand(1.002, 1.015);
+                let low = Math.min(open, targetClose) * getRand(0.985, 0.998);
+                let close = targetClose;
+
+                if (close > high) high = close * 1.001;
+                if (close < low) low = close * 0.999;
+                if (open > high) high = open * 1.001;
+                if (open < low) low = open * 0.999;
+
+                let baseVol = 80000;
+                let volume = Math.floor(baseVol * getRand(0.6, 1.4));
+                
+                if (meta.pattern === "blowoff_top" && (i === 9 || i === 10)) {
+                    volume = Math.floor(baseVol * getRand(2.8, 4.0));
+                } else if (meta.pattern === "double_bottom_wash" && i === 11) {
+                    volume = Math.floor(baseVol * getRand(2.2, 3.2));
+                } else if (meta.pattern === "breakout_retest" && i === 10) {
+                    volume = Math.floor(baseVol * getRand(2.5, 3.5));
+                } else if (meta.pattern === "bull_flag" && i === 14) {
+                    volume = Math.floor(baseVol * getRand(2.4, 3.2));
+                } else if (meta.pattern === "m_top_breakdown" && i === 14) {
+                    volume = Math.floor(baseVol * getRand(2.1, 3.0));
+                } else if (i >= 10 && i <= 14 && (meta.pattern === "bull_flag" || meta.pattern === "bull_trend_pullback")) {
+                    volume = Math.floor(baseVol * getRand(0.3, 0.6)); 
+                }
+
+                generatedData.push({
+                    day: i + 1,
+                    open: open,
+                    high: high,
+                    low: low,
+                    close: close,
+                    volume: volume
+                });
+            }
+
+            return {
+                ...meta,
+                data: generatedData
+            };
+        }
+
+        function renderLevelGrid() {
+            const grid = document.getElementById('levelGrid');
+            grid.innerHTML = '';
+            
+            const startIdx = currentPage * 10;
+            const endIdx = startIdx + 10;
+
+            for (let i = startIdx; i < endIdx; i++) {
+                if (i >= levelMetas.length) break;
+                
+                const meta = levelMetas[i];
+                let badgeHTML = "";
+                let bgBorderClass = "bg-darkBg border-darkBorder text-gray-400 hover:border-gray-600";
+                
+                // 檢查此關卡歷史完賽紀錄
+                if (completedLevels[i] !== undefined) {
+                    const record = completedLevels[i];
+                    if (record.direction === 'PASS') {
+                        badgeHTML = `<span class="text-[9px] bg-gray-500/10 text-gray-400 px-1.5 py-0.5 rounded border border-gray-500/30">觀望</span>`;
+                        bgBorderClass = "bg-gray-500/5 border-gray-500/40 text-gray-300";
+                    } else if (record.profit >= 0) {
+                        badgeHTML = `<span class="text-[9px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30">+$${record.profit.toFixed(0)}</span>`;
+                        bgBorderClass = "bg-emerald-500/5 border-emerald-500/40 text-emerald-300";
+                    } else {
+                        badgeHTML = `<span class="text-[9px] bg-rose-500/10 text-rose-400 px-1.5 py-0.5 rounded border border-rose-500/30">-$${Math.abs(record.profit).toFixed(0)}</span>`;
+                        bgBorderClass = "bg-rose-500/5 border-rose-500/40 text-rose-300";
+                    }
+                }
+
+                if (i === currentLevelIndex) {
+                    bgBorderClass = "bg-yellow-500/10 border-yellow-500 text-yellow-400";
+                }
+
+                grid.innerHTML += `
+                    <button onclick="selectLevel(${i})" class="${bgBorderClass} flex flex-col justify-between p-2.5 text-left text-xs font-bold rounded-xl border transition-all h-[100px] w-full relative group">
+                        <div class="flex justify-between items-start w-full">
+                            <span>神秘股 ${String.fromCharCode(65 + (i % 26))}${i >= 26 ? '2' : ''}</span>
+                            <span class="text-[9px] font-mono font-semibold text-gray-500">No.${i+1}</span>
+                        </div>
+                        <span class="text-[10px] font-normal text-gray-400 line-clamp-1">${meta.realName.split(' ')[0]} setup</span>
+                        <div class="flex justify-between items-center w-full mt-1">
+                            ${badgeHTML ? badgeHTML : `<span class="text-[9px] text-gray-500 font-normal">未應戰</span>`}
+                            <span class="text-[8px] bg-darkCard px-1.5 py-0.5 rounded text-gray-500 group-hover:text-yellow-400 transition-colors">挑戰 ➔</span>
+                        </div>
+                    </button>
+                `;
+            }
+        }
+
+        // 分頁切換
+        function changePage(page) {
+            currentPage = page;
+            for (let i = 0; i < 5; i++) {
+                const btn = document.getElementById(`tab-p-${i}`);
+                if (i === page) {
+                    btn.className = "flex-1 py-1 text-yellow-500 border-b-2 border-yellow-500";
+                } else {
+                    btn.className = "flex-1 py-1 text-gray-400 hover:text-white";
+                }
+            }
+            renderLevelGrid();
+        }
+
+        function updateStatsUI() {
+            let totalProfit = 0;
+            let totalTrades = 0;
+            let wonTrades = 0;
+
+            Object.keys(completedLevels).forEach(key => {
+                const record = completedLevels[key];
+                if (record.direction !== 'PASS') {
+                    totalProfit += record.profit;
+                    totalTrades++;
+                    if (record.profit > 0) wonTrades++;
+                }
+            });
+
+            const winRate = totalTrades > 0 ? (wonTrades / totalTrades) * 100 : 0;
+            document.getElementById('winRateText').innerText = `${winRate.toFixed(1)}%`;
+            document.getElementById('completedCountText').innerText = `${Object.keys(completedLevels).length} / 50`;
+            
+            const sign = totalProfit >= 0 ? "+" : "";
+            const profitTextEl = document.getElementById('totalProfitText');
+            profitTextEl.innerText = `${sign}$${totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            
+            if (totalProfit > 0) {
+                profitTextEl.className = "text-sm font-mono font-bold text-emerald-400";
+            } else if (totalProfit < 0) {
+                profitTextEl.className = "text-sm font-mono font-bold text-rose-400";
+            } else {
+                profitTextEl.className = "text-sm font-mono font-bold text-gray-400";
+            }
+
+            const rankTextEl = document.getElementById('userRankText');
+            let rank = "韭菜新苗";
+            if (virtualBalance >= 500000) rank = "華爾街巨鱷 👑";
+            else if (virtualBalance >= 250000) rank = "百萬操盤手 💎";
+            else if (virtualBalance >= 150000) rank = "趨勢大師 📈";
+            else if (virtualBalance >= 110000) rank = "資深操盤大師";
+            else if (virtualBalance >= 90000) rank = "合格交易員";
+            else if (virtualBalance >= 50000) rank = "市場韭菜學徒";
+            else rank = "爆倉救濟戶 💀";
+
+            rankTextEl.innerText = rank;
+        }
+
+        function loadLevel(index) {
+            currentLevelIndex = index;
+            currentDay = 15; 
+            
+            tradeState = {
+                direction: null,
+                entryPrice: 0,
+                allocatedCapital: 0,
+                leverage: 1,
+                shares: 0,
+                notes: ""
+            };
+
+            renderLevelGrid(); 
+
+            const resolvedLevel = generateLevelData(index);
+
+            document.getElementById('currentLevelBadge').innerText = `關卡 ${index + 1}`;
+            document.getElementById('levelBackground').innerText = resolvedLevel.background;
+            document.getElementById('stockPlaceholderName').innerText = `神秘股 ${String.fromCharCode(65 + (index % 26))}${index >= 26 ? '2' : ''}`;
+            
+            document.getElementById('decisionPanel').classList.remove('hidden');
+            document.getElementById('revealControlPanel').classList.add('hidden');
+            document.getElementById('finishedPanel').classList.add('hidden');
+            
+            document.querySelectorAll('.direction-btn').forEach(btn => {
+                btn.classList.remove('border-yellow-500', 'bg-yellow-500/10');
+                btn.classList.add('border-darkBorder', 'bg-darkBg');
+            });
+            document.getElementById('positionSettings').classList.remove('opacity-50', 'pointer-events-none');
+            
+            document.getElementById('input-position').value = 100;
+            document.getElementById('input-leverage').value = 1;
+            document.getElementById('userAnalysisNotes').value = "";
+            updateTradePreview();
+
+            renderChartAndTables();
+        }
+
+        function selectLevel(index) {
+            loadLevel(index);
+            showToast(`已載入關卡 ${index + 1}：神秘股 ${String.fromCharCode(65 + (index % 26))}${index >= 26 ? '2' : ''}`, "info");
+        }
+
+        function renderChartAndTables() {
+            const resolvedLevel = generateLevelData(currentLevelIndex);
+            
+            const dataWithMA = resolvedLevel.data.map((item, idx) => {
+                return {
+                    ...item,
+                    ma5: calculateMA(resolvedLevel.data, 5, idx),
+                    ma20: calculateMA(resolvedLevel.data, 20, idx)
+                };
+            });
+
+            const currentVisibleData = dataWithMA.slice(0, currentDay);
+            
+            const tableBody = document.getElementById('dataTableBody');
+            tableBody.innerHTML = '';
+            
+            currentVisibleData.forEach(d => {
+                const isUp = d.close >= d.open;
+                let textClass = "";
+                if (isTaiwanColorScheme) {
+                    textClass = isUp ? "text-bullish" : "text-bearish";
+                } else {
+                    textClass = isUp ? "text-bearish" : "text-bullish";
+                }
+                const changeSymbol = isUp ? "▲" : "▼";
+
+                tableBody.innerHTML += `
+                    <tr class="hover:bg-darkBg/60 transition-colors">
+                        <td class="p-2 text-center text-gray-400 font-semibold border-r border-darkBorder/30">Day ${d.day}</td>
+                        <td class="p-2 text-right font-bold ${textClass}">${d.close.toFixed(1)} <span class="text-[9px]">${changeSymbol}</span></td>
+                        <td class="p-2 text-center text-yellow-500/90">${d.ma5 ? d.ma5.toFixed(1) : '--'}</td>
+                        <td class="p-2 text-center text-blue-400/90">${d.ma20 ? d.ma20.toFixed(1) : '--'}</td>
+                        <td class="p-2 text-right text-gray-400">${(d.volume / 1000).toFixed(0)}K</td>
+                    </tr>
+                `;
+            });
+            
+            const latestPrice = currentVisibleData[currentVisibleData.length - 1].close;
+            document.getElementById('latestPriceText').innerText = `$${latestPrice.toFixed(1)}`;
+            document.getElementById('tableDayRange').innerText = `Day 1 ~ Day ${currentDay}`;
+
+            // 繪製高擬真 Canvas K線圖
+            drawStockCanvas(currentVisibleData);
+        }
+
+        // 儲存當前繪製極值以便滑鼠互動定位
+        let drawingCache = {
+            data: [],
+            paddingLeft: 20,
+            chartWidth: 0,
+            maxPrice: 0,
+            minPrice: 0,
+            barWidth: 0,
+            totalDays: 25
+        };
+
+        function drawStockCanvas(data) {
+            const canvas = document.getElementById('stockCanvas');
+            const ctx = canvas.getContext('2d');
+            const container = document.getElementById('canvasContainer');
+            
+            const width = container.clientWidth - 24;
+            const height = 380;
+            canvas.width = width * window.devicePixelRatio;
+            canvas.height = height * window.devicePixelRatio;
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+            ctx.fillStyle = '#080a0c';
+            ctx.fillRect(0, 0, width, height);
+
+            const paddingRight = 50;
+            const paddingTop = 30;
+            const paddingLeft = 20;
+            const chartHeight = 250; 
+            const volHeight = 70;    
+            const volTop = 300;      
+            const chartWidth = width - paddingLeft - paddingRight;
+
+            let maxPrice = -Infinity;
+            let minPrice = Infinity;
+            let maxVol = -Infinity;
+
+            data.forEach(d => {
+                if (d.high > maxPrice) maxPrice = d.high;
+                if (d.low < minPrice) minPrice = d.low;
+                if (d.ma5 && d.ma5 > maxPrice) maxPrice = d.ma5;
+                if (d.ma20 && d.ma20 > maxPrice) maxPrice = d.ma20;
+                if (d.ma5 && d.ma5 < minPrice) minPrice = d.ma5;
+                if (d.ma20 && d.ma20 < minPrice) minPrice = d.ma20;
+                if (d.volume > maxVol) maxVol = d.volume;
+            });
+
+            maxPrice += (maxPrice - minPrice) * 0.08;
+            minPrice -= (maxPrice - minPrice) * 0.08;
+
+            const totalDays = 25; 
+            const barWidth = chartWidth / totalDays;
+            const gap = barWidth * 0.25;
+
+            // 快取繪圖坐標供滑鼠互動使用
+            drawingCache = {
+                data: data,
+                paddingLeft: paddingLeft,
+                chartWidth: chartWidth,
+                maxPrice: maxPrice,
+                minPrice: minPrice,
+                barWidth: barWidth,
+                totalDays: totalDays,
+                paddingTop: paddingTop,
+                chartHeight: chartHeight,
+                volTop: volTop,
+                volHeight: volHeight,
+                maxVol: maxVol
+            };
+
+            ctx.strokeStyle = '#181e26';
+            ctx.lineWidth = 1;
+            ctx.fillStyle = '#627289';
+            ctx.font = '9px monospace';
+            ctx.textBaseline = 'middle';
+
+            const gridLines = 5;
+            for (let i = 0; i <= gridLines; i++) {
+                const y = paddingTop + (chartHeight / gridLines) * i;
+                ctx.beginPath();
+                ctx.moveTo(paddingLeft, y);
+                ctx.lineTo(paddingLeft + chartWidth, y);
+                ctx.stroke();
+
+                const val = maxPrice - ((maxPrice - minPrice) / gridLines) * i;
+                ctx.fillText(val.toFixed(1), paddingLeft + chartWidth + 6, y);
+            }
+
+            const getX = (index) => paddingLeft + index * barWidth + barWidth / 2;
+            const getY = (price) => paddingTop + chartHeight - ((price - minPrice) / (maxPrice - minPrice)) * chartHeight;
+            const getVolY = (volume) => volTop + volHeight - (volume / maxVol) * volHeight;
+
+            ctx.fillStyle = '#222933';
+            ctx.beginPath();
+            ctx.moveTo(paddingLeft, volTop + volHeight + 2);
+            ctx.lineTo(paddingLeft + chartWidth, volTop + volHeight + 2);
+            ctx.stroke();
+
+            ctx.fillStyle = '#627289';
+            data.forEach((d, i) => {
+                if (d.day % 5 === 0 || d.day === 1) {
+                    const x = getX(i);
+                    ctx.fillText(`D${d.day}`, x - 8, volTop + volHeight + 12);
+                }
+            });
+
+            // 繪製成交量
+            data.forEach((d, i) => {
+                const x = paddingLeft + i * barWidth + gap / 2;
+                const y = getVolY(d.volume);
+                const isUp = d.close >= d.open;
+                
+                let color = "";
+                if (isTaiwanColorScheme) {
+                    color = isUp ? '#f6465d' : '#0ecb81';
+                } else {
+                    color = isUp ? '#0ecb81' : '#f6465d';
+                }
+
+                ctx.fillStyle = color;
+                ctx.fillRect(x, y, barWidth - gap, volTop + volHeight - y);
+            });
+
+            // 繪製 K 線蠟燭
+            data.forEach((d, i) => {
+                const x = paddingLeft + i * barWidth + gap / 2;
+                const isUp = d.close >= d.open;
+                
+                let color = "";
+                if (isTaiwanColorScheme) {
+                    color = isUp ? '#f6465d' : '#0ecb81';
+                } else {
+                    color = isUp ? '#0ecb81' : '#f6465d';
+                }
+
+                ctx.strokeStyle = color;
+                ctx.fillStyle = color;
+                ctx.lineWidth = 1.5;
+
+                ctx.beginPath();
+                ctx.moveTo(x + (barWidth - gap) / 2, getY(d.high));
+                ctx.lineTo(x + (barWidth - gap) / 2, getY(d.low));
+                ctx.stroke();
+
+                const yOpen = getY(d.open);
+                const yClose = getY(d.close);
+                const rectHeight = Math.abs(yOpen - yClose) || 1;
+
+                ctx.fillRect(x, Math.min(yOpen, yClose), barWidth - gap, rectHeight);
+            });
+
+            // 繪製 5MA
+            ctx.lineWidth = 1.8;
+            ctx.strokeStyle = '#eab308';
+            ctx.beginPath();
+            let hasFirst5MA = false;
+            data.forEach((d, i) => {
+                if (d.ma5) {
+                    const x = getX(i);
+                    const y = getY(d.ma5);
+                    if (!hasFirst5MA) {
+                        ctx.moveTo(x, y);
+                        hasFirst5MA = true;
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+            });
+            ctx.stroke();
+
+            // 繪製 20MA
+            ctx.lineWidth = 2.2;
+            ctx.strokeStyle = '#3b82f6';
+            ctx.beginPath();
+            let hasFirst20MA = false;
+            data.forEach((d, i) => {
+                if (d.ma20) {
+                    const x = getX(i);
+                    const y = getY(d.ma20);
+                    if (!hasFirst20MA) {
+                        ctx.moveTo(x, y);
+                        hasFirst20MA = true;
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+            });
+            ctx.stroke();
+        }
+
+        function initCanvasInteractiveEvents() {
+            const canvas = document.getElementById('stockCanvas');
+            const container = document.getElementById('canvasContainer');
+            const tooltip = document.getElementById('chartTooltip');
+
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+
+                // 換算 K 線 Index
+                const dataIndex = Math.floor((mouseX - drawingCache.paddingLeft) / drawingCache.barWidth);
+                
+                if (dataIndex >= 0 && dataIndex < drawingCache.data.length) {
+                    const d = drawingCache.data[dataIndex];
+                    
+                    // 重繪 Canvas 原圖，並疊加十字導引線
+                    renderChartAndTables(); 
+                    
+                    const ctx = canvas.getContext('2d');
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([4, 4]);
+
+                    // 繪製垂直十字線
+                    const lineX = drawingCache.paddingLeft + dataIndex * drawingCache.barWidth + drawingCache.barWidth / 2;
+                    ctx.beginPath();
+                    ctx.moveTo(lineX, 10);
+                    ctx.lineTo(lineX, 370);
+                    ctx.stroke();
+
+                    // 繪製水平十字線
+                    ctx.beginPath();
+                    ctx.moveTo(drawingCache.paddingLeft, mouseY);
+                    ctx.lineTo(drawingCache.paddingLeft + drawingCache.chartWidth, mouseY);
+                    ctx.stroke();
+                    ctx.setLineDash([]); // 恢復實線
+
+                    // 更新 Tooltip HTML 浮動提示內容
+                    document.getElementById('tooltipDay').innerText = `Day ${d.day}`;
+                    document.getElementById('tooltipO').innerText = d.open.toFixed(1);
+                    document.getElementById('tooltipH').innerText = d.high.toFixed(1);
+                    document.getElementById('tooltipL').innerText = d.low.toFixed(1);
+                    document.getElementById('tooltipC').innerText = d.close.toFixed(1);
+                    document.getElementById('tooltipMA5').innerText = d.ma5 ? d.ma5.toFixed(1) : '--';
+                    document.getElementById('tooltipMA20').innerText = d.ma20 ? d.ma20.toFixed(1) : '--';
+                    document.getElementById('tooltipVol').innerText = `${(d.volume / 1000).toFixed(0)}K`;
+
+                    // 定位懸浮提示框位置
+                    tooltip.classList.remove('hidden');
+                    
+                    const tooltipWidth = tooltip.offsetWidth;
+                    const containerWidth = container.clientWidth;
+                    let leftPos = e.clientX - rect.left + 15;
+                    
+                    // 避免懸浮提示超出右邊界
+                    if (leftPos + tooltipWidth > containerWidth) {
+                        leftPos = e.clientX - rect.left - tooltipWidth - 15;
+                    }
+                    
+                    tooltip.style.left = `${leftPos}px`;
+                    tooltip.style.top = `${e.clientY - rect.top + 15}px`;
+                } else {
+                    tooltip.classList.add('hidden');
+                }
+            });
+
+            canvas.addEventListener('mouseleave', () => {
+                tooltip.classList.add('hidden');
+                renderChartAndTables(); // 滑鼠移開時還原無十字線畫面
+            });
+        }
+
+        function selectDirection(dir) {
+            tradeState.direction = dir;
+            
+            document.querySelectorAll('.direction-btn').forEach(btn => {
+                btn.classList.remove('border-yellow-500', 'bg-yellow-500/10');
+                btn.classList.add('border-darkBorder', 'bg-darkBg');
+            });
+
+            let activeBtnId = "";
+            if (dir === 'BUY') activeBtnId = "btn-dir-buy";
+            if (dir === 'SHORT') activeBtnId = "btn-dir-short";
+            if (dir === 'PASS') activeBtnId = "btn-dir-pass";
+
+            const activeBtn = document.getElementById(activeBtnId);
+            activeBtn.classList.remove('border-darkBorder', 'bg-darkBg');
+            activeBtn.classList.add('border-yellow-500', 'bg-yellow-500/10');
+
+            const positionSettings = document.getElementById('positionSettings');
+            if (dir === 'PASS') {
+                positionSettings.classList.add('opacity-40', 'pointer-events-none');
+            } else {
+                positionSettings.classList.remove('opacity-40', 'pointer-events-none');
+            }
+
+            updateTradePreview();
+        }
+
+        function updateTradePreview() {
+            const positionPercent = parseInt(document.getElementById('input-position').value);
+            const leverage = parseInt(document.getElementById('input-leverage').value);
+
+            document.getElementById('val-position').innerText = `${positionPercent}%`;
+            document.getElementById('val-leverage').innerText = `${leverage}x`;
+        }
+
+        function executeOrder() {
+            if (!tradeState.direction) {
+                showToast("請先點選方向決策：買入、放空 或 不交易觀望！", "error");
+                return;
+            }
+
+            const resolvedLevel = generateLevelData(currentLevelIndex);
+            const currentPrice = resolvedLevel.data[14].close; 
+
+            tradeState.entryPrice = currentPrice;
+            tradeState.notes = document.getElementById('userAnalysisNotes').value;
+
+            if (tradeState.direction === 'PASS') {
+                tradeState.allocatedCapital = 0;
+                tradeState.leverage = 1;
+                tradeState.shares = 0;
+                showToast("您選擇觀望。開始進行未來 10 天行情步進。", "info");
+            } else {
+                const positionPercent = parseInt(document.getElementById('input-position').value) / 100;
+                const leverage = parseInt(document.getElementById('input-leverage').value);
+                
+                tradeState.leverage = leverage;
+                tradeState.allocatedCapital = virtualBalance * positionPercent;
+                tradeState.shares = (tradeState.allocatedCapital * leverage) / currentPrice;
+
+                const dirText = tradeState.direction === 'BUY' ? "做多買入" : "融券放空";
+                showToast(`委託成交！成交價 $${currentPrice.toFixed(1)}，執行 ${dirText}`, "success");
+            }
+
+            document.getElementById('decisionPanel').classList.add('hidden');
+            document.getElementById('revealControlPanel').classList.remove('hidden');
+            document.getElementById('phaseIndicator').innerText = `第二階段：操盤期 (Day ${currentDay})`;
+            document.getElementById('phaseIndicator').className = "text-xs bg-yellow-500/20 text-yellow-500 px-2.5 py-0.5 rounded-full border border-yellow-500/30";
+
+            updateRevealPanelUI();
+        }
+
+        function updateRevealPanelUI() {
+            const dirLabel = document.getElementById('lblYourDirection');
+            const detailsLabel = document.getElementById('lblYourDetails');
+
+            if (tradeState.direction === 'PASS') {
+                dirLabel.innerText = "空手觀望 (PASS)";
+                dirLabel.className = "text-xs px-2.5 py-0.5 rounded-full font-bold bg-gray-500/20 text-gray-400 border border-gray-500/30";
+                detailsLabel.innerText = "目前空倉，資產不受價格震盪波動影響。";
+            } else {
+                const isBuy = tradeState.direction === 'BUY';
+                dirLabel.innerText = isBuy ? "做多 (BUY)" : "放空 (SHORT)";
+                dirLabel.className = `text-xs px-2.5 py-0.5 rounded-full font-bold ${isBuy ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}`;
+                
+                const positionPercent = document.getElementById('val-position').innerText;
+                const leverageText = document.getElementById('val-leverage').innerText;
+                detailsLabel.innerText = `進場價: $${tradeState.entryPrice.toFixed(1)} | 倉位: ${positionPercent} | 槓桿: ${leverageText}`;
+            }
+
+            calculateLivePnL();
+        }
+
+        function calculateLivePnL() {
+            const resolvedLevel = generateLevelData(currentLevelIndex);
+            const currentPrice = resolvedLevel.data[currentDay - 1].close;
+
+            const pnlVal = document.getElementById('pnlValueText');
+            const pnlDollar = document.getElementById('pnlDollarText');
+
+            if (tradeState.direction === 'PASS') {
+                pnlVal.innerText = "+0.00%";
+                pnlVal.className = "text-lg font-mono font-extrabold text-gray-400";
+                pnlDollar.innerText = "+$0.00";
+                pnlDollar.className = "text-sm font-mono text-gray-500 font-semibold";
+                return;
+            }
+
+            let priceChangeRatio = 0;
+            if (tradeState.direction === 'BUY') {
+                priceChangeRatio = (currentPrice - tradeState.entryPrice) / tradeState.entryPrice;
+            } else {
+                priceChangeRatio = (tradeState.entryPrice - currentPrice) / tradeState.entryPrice;
+            }
+
+            const pnlPercent = priceChangeRatio * tradeState.leverage * 100;
+            const netProfit = tradeState.allocatedCapital * priceChangeRatio * tradeState.leverage;
+
+            const sign = pnlPercent >= 0 ? "+" : "";
+            pnlVal.innerText = `${sign}${pnlPercent.toFixed(2)}%`;
+            pnlDollar.innerText = `${sign}$${netProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            const isProfit = pnlPercent >= 0;
+            let themeColorClass = "";
+            let themeDollarClass = "";
+
+            if (isTaiwanColorScheme) {
+                themeColorClass = isProfit ? "text-bullish" : "text-bearish";
+                themeDollarClass = isProfit ? "text-bullish/90" : "text-bearish/90";
+            } else {
+                themeColorClass = isProfit ? "text-bearish" : "text-bullish";
+                themeDollarClass = isProfit ? "text-bearish/90" : "text-bullish/90";
+            }
+
+            pnlVal.className = `text-lg font-mono font-extrabold ${themeColorClass}`;
+            pnlDollar.className = `text-sm font-mono font-semibold ${themeDollarClass}`;
+        }
+
+        function stepReveal(days) {
+            const resolvedLevel = generateLevelData(currentLevelIndex);
+            const maxDays = resolvedLevel.data.length;
+
+            if (currentDay >= maxDays) {
+                showToast("已經到第25天囉！", "info");
+                finishLevel();
+                return;
+            }
+
+            currentDay = Math.min(currentDay + days, maxDays);
+            renderChartAndTables();
+            calculateLivePnL();
+
+            if (currentDay >= maxDays) {
+                finishLevel();
+            } else {
+                showToast(`前進 ${days} 天！目前為：Day ${currentDay}`, "info");
+            }
+        }
+
+        function revealAll() {
+            const resolvedLevel = generateLevelData(currentLevelIndex);
+            currentDay = resolvedLevel.data.length;
+            renderChartAndTables();
+            calculateLivePnL();
+            finishLevel();
+            showToast("已揭曉全部 25 天完整走勢！", "info");
+        }
+
+        function finishLevel() {
+            const resolvedLevel = generateLevelData(currentLevelIndex);
+            const finalPrice = resolvedLevel.data[24].close;
+
+            document.getElementById('revealControlPanel').classList.add('hidden');
+            document.getElementById('finishedPanel').classList.remove('hidden');
+            document.getElementById('phaseIndicator').innerText = `第三階段：已結算 (Day 25)`;
+            document.getElementById('phaseIndicator').className = "text-xs bg-gray-800 text-gray-400 px-2.5 py-0.5 rounded-full border border-darkBorder";
+
+            let pnlPercent = 0;
+            let netProfit = 0;
+
+            if (tradeState.direction !== 'PASS') {
+                let priceChangeRatio = 0;
+                if (tradeState.direction === 'BUY') {
+                    priceChangeRatio = (finalPrice - tradeState.entryPrice) / tradeState.entryPrice;
+                } else {
+                    priceChangeRatio = (tradeState.entryPrice - finalPrice) / tradeState.entryPrice;
+                }
+                
+                pnlPercent = priceChangeRatio * tradeState.leverage * 100;
+                netProfit = tradeState.allocatedCapital * priceChangeRatio * tradeState.leverage;
+                
+                virtualBalance += netProfit;
+            }
+
+            // 儲存進度與最佳紀錄到 completedLevels
+            completedLevels[currentLevelIndex] = {
+                direction: tradeState.direction,
+                profit: netProfit,
+                pnlPercent: pnlPercent
+            };
+            
+            // 寫入本地存檔
+            saveProgress();
+            updateBalanceUI();
+            updateStatsUI();
+
+            const sign = pnlPercent >= 0 ? "+" : "";
+            const finalPnlPercentEl = document.getElementById('finalPnlPercent');
+            const finalPnlDollarEl = document.getElementById('finalPnlDollar');
+
+            finalPnlPercentEl.innerText = `${sign}${pnlPercent.toFixed(1)}%`;
+            finalPnlDollarEl.innerText = `${sign}$${netProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            const isProfit = pnlPercent >= 0;
+            let colorClass = "";
+            if (tradeState.direction === 'PASS') {
+                colorClass = "text-gray-400";
+            } else {
+                if (isTaiwanColorScheme) {
+                    colorClass = isProfit ? "text-bullish" : "text-bearish";
+                } else {
+                    colorClass = isProfit ? "text-bearish" : "text-bullish";
+                }
+            }
+            finalPnlPercentEl.className = `text-base font-mono font-bold ${colorClass}`;
+            finalPnlDollarEl.className = `text-base font-mono font-bold ${colorClass}`;
+
+            document.getElementById('finalIdentityText').innerText = resolvedLevel.realName;
+            document.getElementById('finalDateText').innerText = resolvedLevel.dateRange;
+            document.getElementById('analysisReviewText').innerText = resolvedLevel.analysis;
+        }
+
+        function resetGame() {
+            loadLevel(currentLevelIndex);
+        }
+
+        function goToNextLevel() {
+            const nextIndex = (currentLevelIndex + 1) % levelMetas.length;
+            const nextPage = Math.floor(nextIndex / 10);
+            if (nextPage !== currentPage) {
+                changePage(nextPage);
+            }
+            loadLevel(nextIndex);
+        }
+
+        function showToast(message, type = "info") {
+            const toast = document.getElementById('toastNotification');
+            const toastMsg = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.innerText = message;
+
+            if (type === "success") {
+                toastIcon.className = "bg-emerald-500/20 text-emerald-400 p-1.5 rounded-full text-xs";
+                toastIcon.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            } else if (type === "error") {
+                toastIcon.className = "bg-rose-500/20 text-rose-400 p-1.5 rounded-full text-xs";
+                toastIcon.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+            } else {
+                toastIcon.className = "bg-blue-500/20 text-blue-400 p-1.5 rounded-full text-xs";
+                toastIcon.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            }
+
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-24', 'opacity-0');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
